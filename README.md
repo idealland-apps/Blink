@@ -29,6 +29,25 @@ go build -o ./bin/blinkpick ./cmd/blinkpick
 ./bin/blinkpick --help
 ```
 
+## Maintainer releases
+
+Releases are **manual only**. Normal commits and pushes never publish a GitHub Release.
+
+After `.github/workflows/release.yml` is on the default branch, open **Actions → Release Blinkpick → Run workflow** in GitHub. Select the source branch/commit, enter a new tag such as `v0.1.0`, optionally select **prerelease**, then run it.
+
+The workflow runs tests and `go vet`, cross-compiles these six standalone binaries, and only then creates the tag and GitHub Release:
+
+```text
+blinkpick_linux_amd64
+blinkpick_linux_arm64
+blinkpick_darwin_amd64
+blinkpick_darwin_arm64
+blinkpick_windows_amd64.exe
+blinkpick_windows_arm64.exe
+```
+
+An existing tag intentionally makes the release job fail rather than overwriting a published release.
+
 ## Configure Miniflux
 
 Run the wizard once:

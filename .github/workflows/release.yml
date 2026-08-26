@@ -1,0 +1,106 @@
+name: Release Blinkpick
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "New release tag (for example v0.1.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark this GitHub Release as a prerelease"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: go test ./...
+      - name: Vet
+        run: go vet ./...
+
+  build:
+    name: Build ${{ matrix.goos }}-${{ matrix.goarch }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            extension: ""
+          - goos: linux
+            goarch: arm64
+            extension: ""
+          - goos: darwin
+            goarch: amd64
+            extension: ""
+          - goos: darwin
+            goarch: arm64
+            extension: ""
+          - goos: windows
+            goarch: amd64
+            extension: ".exe"
+          - goos: windows
+            goarch: arm64
+            extension: ".exe"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags="-s -w" \
+            -o "dist/blinkpick_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.extension }}" \
+            ./cmd/blinkpick
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: blinkpick-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: blinkpick-*
+          path: release-assets
+          merge-multiple: true
+      - name: Create release and tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          if [ "${PRERELEASE}" = "true" ]; then
+            gh release create "${TAG}" release-assets/* --title "Blink ${TAG}" --generate-notes --prerelease
+          else
+            gh release create "${TAG}" release-assets/* --title "Blink ${TAG}" --generate-notes
+          fi
