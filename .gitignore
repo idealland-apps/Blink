@@ -1,0 +1,6 @@
+# Build output
+/bin/
+/coverage.out
+
+# Local development configuration and state
+/.env
