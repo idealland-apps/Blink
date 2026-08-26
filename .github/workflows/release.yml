@@ -100,7 +100,7 @@ jobs:
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
           if [ "${PRERELEASE}" = "true" ]; then
-            gh release create "${TAG}" release-assets/* --title "Blink ${TAG}" --generate-notes --prerelease
+            gh release create "${TAG}" release-assets/* --repo "${GITHUB_REPOSITORY}" --title "Blink ${TAG}" --generate-notes --prerelease
           else
-            gh release create "${TAG}" release-assets/* --title "Blink ${TAG}" --generate-notes
+            gh release create "${TAG}" release-assets/* --repo "${GITHUB_REPOSITORY}" --title "Blink ${TAG}" --generate-notes
           fi
