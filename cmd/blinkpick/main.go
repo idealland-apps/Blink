@@ -96,25 +96,37 @@ func configPath() string {
 	if value := os.Getenv("BLINKPICK_CONFIG_PATH"); value != "" {
 		return value
 	}
+	executable, err := os.Executable()
+	if err != nil {
+		return "blinkpick.config.json"
+	}
+	return filepath.Join(filepath.Dir(executable), "blinkpick.config.json")
+}
+
+func legacyConfigPath() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "blinkpick-config.json"
 	}
 	return filepath.Join(dir, "blink", "config.json")
 }
+
 func statePath() string {
 	if value := os.Getenv("BLINKPICK_STATE_PATH"); value != "" {
 		return value
 	}
-	dir, err := os.UserCacheDir()
+	executable, err := os.Executable()
 	if err != nil {
 		return "blinkpick-state.json"
 	}
-	return filepath.Join(dir, "blink", "state.json")
+	return filepath.Join(filepath.Dir(executable), "blinkpick-state.json")
 }
 
 func loadConfig() (config.Config, error) {
 	c, err := config.Load(configPath())
+	if os.IsNotExist(err) && configPath() != legacyConfigPath() {
+		c, err = config.Load(legacyConfigPath())
+	}
 	if os.IsNotExist(err) {
 		return config.Config{}, fmt.Errorf("not configured; run `blinkpick config`")
 	}

@@ -63,11 +63,22 @@ It asks for:
 3. API token (recommended) or username/password; and
 4. confirmation before it writes the configuration.
 
-Create an API token in Miniflux at **Settings → API Keys → Create a new API key**. The configuration is stored with owner-only file permissions in the OS user config directory:
+Create an API token in Miniflux at **Settings → API Keys → Create a new API key**. Blinkpick is portable by default: it saves its configuration next to the executable you run:
 
-- Linux: `~/.config/blink/config.json`
-- macOS: `~/Library/Application Support/blink/config.json`
-- Windows: `%AppData%\blink\config.json`
+```text
+<directory containing blinkpick>/blinkpick.config.json
+```
+
+The recent-pick history is stored alongside it as `blinkpick-state.json`. This makes an extracted release folder self-contained and easy to move between machines. Keep the folder private because `blinkpick.config.json` contains your Miniflux credential.
+
+If the executable directory is intentionally read-only (for example a system-wide installation), set explicit locations with environment variables:
+
+```bash
+BLINKPICK_CONFIG_PATH=/path/to/config.json
+BLINKPICK_STATE_PATH=/path/to/state.json
+```
+
+Existing v0.1.0 configuration in the former OS user-config location is still read as a fallback; running `blinkpick config` writes the new portable sidecar configuration.
 
 For noninteractive setup or a single field update:
 

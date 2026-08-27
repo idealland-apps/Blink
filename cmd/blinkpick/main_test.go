@@ -21,6 +21,18 @@ func TestRunHelp(t *testing.T) {
 	}
 }
 
+func TestConfigPathDefaultsBesideExecutable(t *testing.T) {
+	t.Setenv("BLINKPICK_CONFIG_PATH", "")
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(filepath.Dir(executable), "blinkpick.config.json")
+	if got := configPath(); got != want {
+		t.Fatalf("configPath() = %q, want %q", got, want)
+	}
+}
+
 func TestConfigWizardCanCancelWithoutWritingConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	t.Setenv("BLINKPICK_CONFIG_PATH", path)
