@@ -81,7 +81,11 @@ func (c *Client) doJSON(ctx context.Context, method, endpoint string, query url.
 	if err != nil {
 		return fmt.Errorf("parse Miniflux URL: %w", err)
 	}
-	base.Path = path.Join(base.Path, endpoint)
+	basePath := strings.TrimSuffix(base.Path, "/")
+	if strings.HasSuffix(basePath, "/v1") && strings.HasPrefix(endpoint, "/v1/") {
+		endpoint = strings.TrimPrefix(endpoint, "/v1")
+	}
+	base.Path = path.Join(basePath, endpoint)
 	base.RawQuery = query.Encode()
 	var body *bytes.Reader
 	if requestBody != nil {

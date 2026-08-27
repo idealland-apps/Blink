@@ -33,6 +33,21 @@ func TestListUnreadEntriesUsesTokenAndFilters(t *testing.T) {
 	}
 }
 
+func TestListEntriesAcceptsAPIVersionInConfiguredURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/entries" {
+			t.Fatalf("path = %q, want /v1/entries", r.URL.Path)
+		}
+		_, _ = io.WriteString(w, `{"total":0,"entries":[]}`)
+	}))
+	defer server.Close()
+
+	client := New(config.Config{Provider: "miniflux", URL: server.URL + "/v1", Token: "token"})
+	if _, err := client.ListEntries(context.Background(), ListOptions{UnreadOnly: true}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUpdateEntryUsesBasicAuthAndDoesNotLeakSecret(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()

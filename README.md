@@ -59,7 +59,7 @@ blinkpick config
 It asks for:
 
 1. provider (currently `miniflux`);
-2. the base Miniflux URL;
+2. the Miniflux URL (either the site root, such as `https://rss.example.com`, or its API prefix, such as `https://rss.example.com/v1`);
 3. API token (recommended) or username/password; and
 4. confirmation before it writes the configuration.
 
