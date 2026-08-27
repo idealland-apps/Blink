@@ -115,7 +115,6 @@ At the action bar, use **Left/Right Arrow** to select an action and **Enter** to
 | `s` | Select and toggle Miniflux saved/starred state |
 | `r` | Select and toggle the Miniflux read state |
 | `n` | Select and pick another article |
-| `?` | Show help |
 | `q` | Quit |
 
 Save, mark-read, and open actions keep the current article visible and show a result notice. Only **Next** fetches a new card.

@@ -449,10 +449,6 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 					needsFullRender = true
 				}
 				continue
-			case "?":
-				notice = "←/→ select · Enter run · o/s/r/n/q shortcuts"
-				needsFullRender = true
-				continue
 			case "o":
 				selected = 0
 			case "s":
@@ -466,7 +462,7 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 			case "enter":
 				// Run the highlighted action.
 			default:
-				notice = "Use ←/→ and Enter, or press ? for help."
+				notice = "Use ←/→ and Enter, or o/s/r/n/q shortcuts."
 				needsFullRender = true
 				continue
 			}
