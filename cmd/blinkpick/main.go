@@ -394,6 +394,8 @@ const (
 	actionQuit
 )
 
+var actionShortcuts = []string{"o", "r", "n", "s", "q"}
+
 func actionLabels(entry model.Entry) []string {
 	readAction := "Mark read"
 	if strings.EqualFold(entry.Status, "read") {
@@ -603,14 +605,30 @@ func renderCard(out io.Writer, entry model.Entry, view cardView) {
 
 func renderActionBar(out io.Writer, entry model.Entry, selected int, color bool) {
 	for index, action := range actionLabels(entry) {
+		label := action
+		if color {
+			label = underlineActionShortcut(action, actionShortcuts[index], index == actionMarkRead)
+		}
 		if index == selected && color {
-			fmt.Fprintf(out, " \x1b[7m %s \x1b[0m", action)
+			fmt.Fprintf(out, " \x1b[7m %s \x1b[0m", label)
 		} else if index == selected {
-			fmt.Fprintf(out, " [ %s ]", action)
+			fmt.Fprintf(out, " [ %s ]", label)
 		} else {
-			fmt.Fprintf(out, "   %s  ", action)
+			fmt.Fprintf(out, "   %s  ", label)
 		}
 	}
+}
+
+func underlineActionShortcut(label, shortcut string, last bool) string {
+	lowerLabel, lowerShortcut := strings.ToLower(label), strings.ToLower(shortcut)
+	index := strings.Index(lowerLabel, lowerShortcut)
+	if last {
+		index = strings.LastIndex(lowerLabel, lowerShortcut)
+	}
+	if index < 0 {
+		return label
+	}
+	return label[:index] + "\x1b[4m" + label[index:index+len(shortcut)] + "\x1b[24m" + label[index+len(shortcut):]
 }
 
 func redrawActionBar(out io.Writer, entry model.Entry, selected int, color bool) {

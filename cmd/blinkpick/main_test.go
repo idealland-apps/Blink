@@ -48,6 +48,20 @@ func TestActionLabelsReflectEntryState(t *testing.T) {
 	}
 }
 
+func TestActionBarUnderlinesShortcutLetter(t *testing.T) {
+	var output bytes.Buffer
+
+	renderActionBar(&output, model.Entry{}, actionOpen, true)
+
+	got := output.String()
+	if !strings.Contains(got, "\x1b[4mO\x1b[24mpen original") {
+		t.Fatalf("open shortcut is not underlined: %q", got)
+	}
+	if !strings.Contains(got, "Mark \x1b[4mr\x1b[24mead") {
+		t.Fatalf("mark-read shortcut is not underlined: %q", got)
+	}
+}
+
 func TestRenderCardUsesSemanticANSIStylesAndSelection(t *testing.T) {
 	entry := model.Entry{ID: 1, Title: "Styled article", ReadingTime: 3, PublishedAt: time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)}
 	entry.Feed.Title = "Example Feed"
@@ -57,7 +71,7 @@ func TestRenderCardUsesSemanticANSIStylesAndSelection(t *testing.T) {
 	renderCard(&output, entry, cardView{Color: true, Selected: 1})
 
 	got := output.String()
-	if !strings.Contains(got, "\x1b[1m") || !strings.Contains(got, "\x1b[7m Mark read \x1b[0m") {
+	if !strings.Contains(got, "\x1b[1m") || !strings.Contains(got, "\x1b[7m Mark \x1b[4mr\x1b[24mead \x1b[0m") {
 		t.Fatalf("rendered card lacks expected ANSI semantic styles: %q", got)
 	}
 }
@@ -106,7 +120,7 @@ func TestRedrawActionBarOnlyRepaintsTheActionLine(t *testing.T) {
 	if !strings.HasPrefix(got, "\x1b[1A\r\x1b[2K") || strings.Contains(got, "\x1b[2J") {
 		t.Fatalf("redraw = %q, want a single-line repaint without full clear", got)
 	}
-	if !strings.Contains(got, "\x1b[7m Mark read \x1b[0m") {
+	if !strings.Contains(got, "\x1b[7m Mark \x1b[4mr\x1b[24mead \x1b[0m") {
 		t.Fatalf("selected action missing from redraw: %q", got)
 	}
 }

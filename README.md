@@ -103,7 +103,7 @@ The card shows a status badge, category, feed, estimated reading time, publicati
 
 The interactive card runs in the terminal's alternate screen buffer, so normal terminal scrollback does not accumulate stale card redraws. Exiting restores the prior shell screen. It intentionally sends full reading to the original site rather than implementing an HTML browser.
 
-The card uses ANSI semantic styles rather than fixed RGB colors: category/title use bold and the terminal's cyan palette, metadata is dimmed, and the selected action uses reverse video. This respects the user-selected terminal theme. Set `NO_COLOR=1` to opt out of colors and retain a plain-text selected button.
+The card uses ANSI semantic styles rather than fixed RGB colors: category/title use bold and the terminal's cyan palette, metadata is dimmed, and the selected action uses reverse video. Each action's shortcut letter is underlined — **O**pen original, Mark **r**ead/unread, **N**ext, **S**tar/unstar, **Q**uit — so shortcuts are discoverable without a separate help view. This respects the user-selected terminal theme. Set `NO_COLOR=1` to opt out of colors and retain a plain-text selected button.
 
 At the action bar, use **Left/Right Arrow** to select an action and **Enter** to run it. Actions stay in English and are ordered by the reading flow: `Open original`, `Mark read` / `Mark unread`, `Next`, `Star` / `Unstar`, and `Quit`. `Open original` only opens the browser; it intentionally does not alter the Miniflux read state. Keyboard shortcuts remain available:
 
