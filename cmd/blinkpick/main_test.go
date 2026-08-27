@@ -50,6 +50,20 @@ func TestRenderCardUsesSemanticANSIStylesAndSelection(t *testing.T) {
 	}
 }
 
+func TestRedrawActionBarOnlyRepaintsTheActionLine(t *testing.T) {
+	var output bytes.Buffer
+
+	redrawActionBar(&output, 2, true)
+
+	got := output.String()
+	if !strings.HasPrefix(got, "\x1b[1A\r\x1b[2K") || strings.Contains(got, "\x1b[2J") {
+		t.Fatalf("redraw = %q, want a single-line repaint without full clear", got)
+	}
+	if !strings.Contains(got, "\x1b[7m Mark read \x1b[0m") {
+		t.Fatalf("selected action missing from redraw: %q", got)
+	}
+}
+
 func TestConfigWizardCanCancelWithoutWritingConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	t.Setenv("BLINKPICK_CONFIG_PATH", path)

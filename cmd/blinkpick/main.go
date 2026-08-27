@@ -401,11 +401,15 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 			return 1
 		}
 		selected, notice := 0, ""
+		needsFullRender := true
 		for {
-			if color {
-				_, _ = fmt.Fprint(stdout, "\x1b[2J\x1b[H")
+			if needsFullRender {
+				if color {
+					_, _ = fmt.Fprint(stdout, "\x1b[2J\x1b[H")
+				}
+				renderCard(stdout, entry, cardView{Color: color, Selected: selected, Notice: notice})
+				needsFullRender = false
 			}
-			renderCard(stdout, entry, cardView{Color: color, Selected: selected, Notice: notice})
 			key, ok := readKey(reader)
 			if !ok {
 				return 0
@@ -413,12 +417,23 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 			switch key {
 			case "left":
 				selected = (selected + len(cardActions) - 1) % len(cardActions)
+				if color {
+					redrawActionBar(stdout, selected, true)
+				} else {
+					needsFullRender = true
+				}
 				continue
 			case "right":
 				selected = (selected + 1) % len(cardActions)
+				if color {
+					redrawActionBar(stdout, selected, true)
+				} else {
+					needsFullRender = true
+				}
 				continue
 			case "?":
 				notice = "←/→ select · Enter run · o/s/r/n/q shortcuts"
+				needsFullRender = true
 				continue
 			case "o":
 				selected = 0
@@ -434,6 +449,7 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 				// Run the highlighted action.
 			default:
 				notice = "Use ←/→ and Enter, or press ? for help."
+				needsFullRender = true
 				continue
 			}
 			switch selected {
@@ -468,6 +484,7 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 			case 4:
 				return 0
 			}
+			needsFullRender = true
 			if selected == 3 {
 				break
 			}
@@ -526,21 +543,33 @@ func renderCard(out io.Writer, entry model.Entry, view cardView) {
 	}
 	fmt.Fprintf(out, "%s%s%s%s", bold, accent, category, reset)
 	fmt.Fprintf(out, "  %s· %s%s  %s· %s%d min%s  %s· %s%s\n\n", muted, entry.Feed.Title, reset, muted, bold, entry.ReadingTime, reset, muted, entry.PublishedAt.Local().Format("2006-01-02 15:04"), reset)
-	fmt.Fprintf(out, "%s%s%s\n\n%s\n\n%s%s%s\n\n", bold, entry.Title, reset, preview(entry.Content, 700), muted, entry.URL, reset)
+	fmt.Fprintf(out, "%s%s%s\n\n%s\n\n%s%s%s\n", bold, entry.Title, reset, preview(entry.Content, 700), muted, entry.URL, reset)
+	if view.Notice != "" {
+		fmt.Fprintf(out, "\n%s%s%s\n", muted, view.Notice, reset)
+	}
+	fmt.Fprint(out, "\n")
+	renderActionBar(out, view.Selected, view.Color)
+	fmt.Fprint(out, "\n")
+}
+
+func renderActionBar(out io.Writer, selected int, color bool) {
 	for index, action := range cardActions {
-		if index == view.Selected && view.Color {
+		if index == selected && color {
 			fmt.Fprintf(out, " \x1b[7m %s \x1b[0m", action)
-		} else if index == view.Selected {
+		} else if index == selected {
 			fmt.Fprintf(out, " [ %s ]", action)
 		} else {
 			fmt.Fprintf(out, "   %s  ", action)
 		}
 	}
-	if view.Notice != "" {
-		fmt.Fprintf(out, "\n\n%s%s%s", muted, view.Notice, reset)
-	}
-	fmt.Fprint(out, "\n")
 }
+
+func redrawActionBar(out io.Writer, selected int, color bool) {
+	_, _ = fmt.Fprint(out, "\x1b[1A\r\x1b[2K")
+	renderActionBar(out, selected, color)
+	_, _ = fmt.Fprint(out, "\n")
+}
+
 func preview(html string, limit int) string {
 	var b strings.Builder
 	inTag := false
