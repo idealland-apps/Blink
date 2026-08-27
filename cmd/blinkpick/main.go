@@ -22,6 +22,7 @@ import (
 	"github.com/idealland-apps/Blink/internal/model"
 	"github.com/idealland-apps/Blink/internal/picker"
 	"github.com/idealland-apps/Blink/internal/state"
+	"golang.org/x/term"
 )
 
 const usage = `Blink — random reading picks for the time between tasks.
@@ -379,60 +380,166 @@ func runDoctor(stdout, stderr io.Writer) int {
 	return 0
 }
 
+type cardView struct {
+	Color    bool
+	Selected int
+	Notice   string
+}
+
+var cardActions = []string{"Open original", "Save", "Mark read", "Next", "Quit"}
+
 func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) int {
-	scanner := bufio.NewScanner(in)
+	reader := bufio.NewReader(in)
+	color, raw := enableInteractiveTerminal(in, stdout)
+	if raw != nil {
+		defer raw()
+	}
 	for {
 		entry, client, err := selectEntry(flags)
 		if err != nil {
 			_, _ = fmt.Fprintln(stderr, "blinkpick:", err)
 			return 1
 		}
-		renderCard(stdout, entry)
-		fmt.Fprint(stdout, "[o]pen [s]ave [r]ead [n]ext [q]uit [?]help > ")
-		if !scanner.Scan() {
-			return 0
-		}
-		switch strings.ToLower(strings.TrimSpace(scanner.Text())) {
-		case "", "n":
-			continue
-		case "q":
-			return 0
-		case "?":
-			fmt.Fprintln(stdout, "o opens the original URL; s toggles saved; r marks read; n picks another; q quits.")
-		case "o":
-			if err := openURL(entry.URL); err != nil {
-				fmt.Fprintln(stderr, "open browser:", err)
+		selected, notice := 0, ""
+		for {
+			if color {
+				_, _ = fmt.Fprint(stdout, "\x1b[2J\x1b[H")
 			}
-		case "s":
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			err := client.SetStarred(ctx, entry.ID, !entry.Starred)
-			cancel()
-			if err != nil {
-				fmt.Fprintln(stderr, "save:", err)
-			} else {
-				fmt.Fprintln(stdout, "Saved state updated.")
+			renderCard(stdout, entry, cardView{Color: color, Selected: selected, Notice: notice})
+			key, ok := readKey(reader)
+			if !ok {
+				return 0
 			}
-		case "r":
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			err := client.MarkRead(ctx, entry.ID)
-			cancel()
-			if err != nil {
-				fmt.Fprintln(stderr, "mark read:", err)
-			} else {
-				fmt.Fprintln(stdout, "Marked read.")
+			switch key {
+			case "left":
+				selected = (selected + len(cardActions) - 1) % len(cardActions)
+				continue
+			case "right":
+				selected = (selected + 1) % len(cardActions)
+				continue
+			case "?":
+				notice = "←/→ select · Enter run · o/s/r/n/q shortcuts"
+				continue
+			case "o":
+				selected = 0
+			case "s":
+				selected = 1
+			case "r":
+				selected = 2
+			case "n":
+				selected = 3
+			case "q":
+				selected = 4
+			case "enter":
+				// Run the highlighted action.
+			default:
+				notice = "Use ←/→ and Enter, or press ? for help."
+				continue
 			}
-		default:
-			fmt.Fprintln(stdout, "Unknown action. Press ? for help.")
+			switch selected {
+			case 0:
+				if err := openURL(entry.URL); err != nil {
+					notice = "Could not open browser: " + err.Error()
+				} else {
+					notice = "Opened original URL."
+				}
+			case 1:
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+				err := client.SetStarred(ctx, entry.ID, !entry.Starred)
+				cancel()
+				if err != nil {
+					notice = "Save failed: " + err.Error()
+				} else {
+					entry.Starred = !entry.Starred
+					notice = map[bool]string{true: "Saved in Miniflux.", false: "Removed from saved."}[entry.Starred]
+				}
+			case 2:
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+				err := client.MarkRead(ctx, entry.ID)
+				cancel()
+				if err != nil {
+					notice = "Mark read failed: " + err.Error()
+				} else {
+					entry.Status = "read"
+					notice = "Marked read in Miniflux."
+				}
+			case 3:
+				break
+			case 4:
+				return 0
+			}
+			if selected == 3 {
+				break
+			}
 		}
 	}
 }
 
-func renderCard(out io.Writer, entry model.Entry) {
+func enableInteractiveTerminal(in io.Reader, out io.Writer) (bool, func()) {
+	if os.Getenv("NO_COLOR") != "" {
+		return false, nil
+	}
+	input, inputOK := in.(*os.File)
+	output, outputOK := out.(*os.File)
+	if !inputOK || !outputOK || !term.IsTerminal(int(input.Fd())) || !term.IsTerminal(int(output.Fd())) {
+		return false, nil
+	}
+	oldState, err := term.MakeRaw(int(input.Fd()))
+	if err != nil {
+		return true, nil
+	}
+	return true, func() { _ = term.Restore(int(input.Fd()), oldState); _, _ = fmt.Fprint(out, "\x1b[0m\n") }
+}
+
+func readKey(reader *bufio.Reader) (string, bool) {
+	key, err := reader.ReadByte()
+	if err != nil {
+		return "", false
+	}
+	if key == '\x1b' {
+		left, err1 := reader.ReadByte()
+		right, err2 := reader.ReadByte()
+		if err1 == nil && err2 == nil && left == '[' {
+			if right == 'D' {
+				return "left", true
+			}
+			if right == 'C' {
+				return "right", true
+			}
+		}
+		return "", true
+	}
+	if key == '\r' || key == '\n' {
+		return "enter", true
+	}
+	return strings.ToLower(string(key)), true
+}
+
+func renderCard(out io.Writer, entry model.Entry, view cardView) {
 	category := entry.Feed.Category.Title
 	if category == "" {
 		category = "Uncategorized"
 	}
-	fmt.Fprintf(out, "\n%s · %s · %d min · %s\n\n%s\n\n%s\n\n%s\n\n", category, entry.Feed.Title, entry.ReadingTime, entry.PublishedAt.Local().Format("2006-01-02 15:04"), entry.Title, preview(entry.Content, 700), entry.URL)
+	bold, accent, muted, reset := "", "", "", ""
+	if view.Color {
+		bold, accent, muted, reset = "\x1b[1m", "\x1b[36m", "\x1b[2m", "\x1b[0m"
+	}
+	fmt.Fprintf(out, "%s%s%s%s", bold, accent, category, reset)
+	fmt.Fprintf(out, "  %s· %s%s  %s· %s%d min%s  %s· %s%s\n\n", muted, entry.Feed.Title, reset, muted, bold, entry.ReadingTime, reset, muted, entry.PublishedAt.Local().Format("2006-01-02 15:04"), reset)
+	fmt.Fprintf(out, "%s%s%s\n\n%s\n\n%s%s%s\n\n", bold, entry.Title, reset, preview(entry.Content, 700), muted, entry.URL, reset)
+	for index, action := range cardActions {
+		if index == view.Selected && view.Color {
+			fmt.Fprintf(out, " \x1b[7m %s \x1b[0m", action)
+		} else if index == view.Selected {
+			fmt.Fprintf(out, " [ %s ]", action)
+		} else {
+			fmt.Fprintf(out, "   %s  ", action)
+		}
+	}
+	if view.Notice != "" {
+		fmt.Fprintf(out, "\n\n%s%s%s", muted, view.Notice, reset)
+	}
+	fmt.Fprint(out, "\n")
 }
 func preview(html string, limit int) string {
 	var b strings.Builder

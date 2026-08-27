@@ -101,16 +101,22 @@ blinkpick --all
 
 The card shows category, feed, estimated reading time, publication time, title, a short plaintext preview, and the original URL. It intentionally sends full reading to the original site rather than implementing an HTML browser.
 
-At the action prompt:
+The card uses ANSI semantic styles rather than fixed RGB colors: category/title use bold and the terminal's cyan palette, metadata is dimmed, and the selected action uses reverse video. This respects the user-selected terminal theme. Set `NO_COLOR=1` to opt out of colors and retain a plain-text selected button.
+
+At the action bar, use **Left/Right Arrow** to select an action and **Enter** to run it. Keyboard shortcuts remain available:
 
 | Key | Action |
 |---|---|
-| `o` | Open the original URL with the OS default browser |
-| `s` | Toggle Miniflux saved/starred state |
-| `r` | Mark the entry read in Miniflux |
-| `n` / Enter | Pick another article |
+| `←` / `→` | Move the highlighted action button |
+| Enter | Run the highlighted action |
+| `o` | Select and open the original URL with the OS default browser |
+| `s` | Select and toggle Miniflux saved/starred state |
+| `r` | Select and mark the entry read in Miniflux |
+| `n` | Select and pick another article |
 | `?` | Show help |
 | `q` | Quit |
+
+Save, mark-read, and open actions keep the current article visible and show a result notice. Only **Next** fetches a new card.
 
 ## Agent hooks and scripts
 
