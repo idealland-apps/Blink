@@ -78,8 +78,6 @@ BLINKPICK_CONFIG_PATH=/path/to/config.json
 BLINKPICK_STATE_PATH=/path/to/state.json
 ```
 
-Existing v0.1.0 configuration in the former OS user-config location is still read as a fallback; running `blinkpick config` writes the new portable sidecar configuration.
-
 For noninteractive setup or a single field update:
 
 ```bash
