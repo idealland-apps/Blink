@@ -68,6 +68,10 @@ func (c *Client) ListEntries(ctx context.Context, options ListOptions) ([]model.
 func (c *Client) MarkRead(ctx context.Context, id int64) error {
 	return c.update(ctx, id, map[string]any{"status": "read"})
 }
+
+func (c *Client) MarkUnread(ctx context.Context, id int64) error {
+	return c.update(ctx, id, map[string]any{"status": "unread"})
+}
 func (c *Client) SetStarred(ctx context.Context, id int64, starred bool) error {
 	return c.update(ctx, id, map[string]any{"starred": starred})
 }

@@ -105,7 +105,7 @@ The interactive card runs in the terminal's alternate screen buffer, so normal t
 
 The card uses ANSI semantic styles rather than fixed RGB colors: category/title use bold and the terminal's cyan palette, metadata is dimmed, and the selected action uses reverse video. This respects the user-selected terminal theme. Set `NO_COLOR=1` to opt out of colors and retain a plain-text selected button.
 
-At the action bar, use **Left/Right Arrow** to select an action and **Enter** to run it. Keyboard shortcuts remain available:
+At the action bar, use **Left/Right Arrow** to select an action and **Enter** to run it. Actions stay in English and are ordered by the reading flow: `Open original`, `Mark read` / `Mark unread`, `Next`, `Save` / `Unsave`, and `Quit`. `Open original` only opens the browser; it intentionally does not alter the Miniflux read state. Keyboard shortcuts remain available:
 
 | Key | Action |
 |---|---|
@@ -113,7 +113,7 @@ At the action bar, use **Left/Right Arrow** to select an action and **Enter** to
 | Enter | Run the highlighted action |
 | `o` | Select and open the original URL with the OS default browser |
 | `s` | Select and toggle Miniflux saved/starred state |
-| `r` | Select and mark the entry read in Miniflux |
+| `r` | Select and toggle the Miniflux read state |
 | `n` | Select and pick another article |
 | `?` | Show help |
 | `q` | Quit |

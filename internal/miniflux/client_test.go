@@ -48,6 +48,25 @@ func TestListEntriesAcceptsAPIVersionInConfiguredURL(t *testing.T) {
 	}
 }
 
+func TestMarkUnreadSendsUnreadStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut || r.URL.Path != "/v1/entries/9" {
+			t.Fatalf("request = %s %s", r.Method, r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if !strings.Contains(string(body), `"status":"unread"`) {
+			t.Fatalf("body = %s", body)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	client := New(config.Config{Provider: "miniflux", URL: server.URL, Token: "token"})
+	if err := client.MarkUnread(context.Background(), 9); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUpdateEntryUsesBasicAuthAndDoesNotLeakSecret(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()

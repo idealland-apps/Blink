@@ -36,6 +36,18 @@ func TestConfigPathDefaultsBesideExecutable(t *testing.T) {
 	}
 }
 
+func TestActionLabelsReflectEntryState(t *testing.T) {
+	unread := actionLabels(model.Entry{Status: "unread"})
+	if got, want := strings.Join(unread, "|"), "Open original|Mark read|Next|Save|Quit"; got != want {
+		t.Fatalf("unread labels = %q, want %q", got, want)
+	}
+
+	readStarred := actionLabels(model.Entry{Status: "read", Starred: true})
+	if got, want := strings.Join(readStarred, "|"), "Open original|Mark unread|Next|Unsave|Quit"; got != want {
+		t.Fatalf("read/starred labels = %q, want %q", got, want)
+	}
+}
+
 func TestRenderCardUsesSemanticANSIStylesAndSelection(t *testing.T) {
 	entry := model.Entry{ID: 1, Title: "Styled article", ReadingTime: 3, PublishedAt: time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)}
 	entry.Feed.Title = "Example Feed"
@@ -45,7 +57,7 @@ func TestRenderCardUsesSemanticANSIStylesAndSelection(t *testing.T) {
 	renderCard(&output, entry, cardView{Color: true, Selected: 1})
 
 	got := output.String()
-	if !strings.Contains(got, "\x1b[1m") || !strings.Contains(got, "\x1b[7m Save \x1b[0m") {
+	if !strings.Contains(got, "\x1b[1m") || !strings.Contains(got, "\x1b[7m Mark read \x1b[0m") {
 		t.Fatalf("rendered card lacks expected ANSI semantic styles: %q", got)
 	}
 }
@@ -75,7 +87,7 @@ func TestAlternateScreenRestoresMainScrollbackOnExit(t *testing.T) {
 func TestRedrawActionBarOnlyRepaintsTheActionLine(t *testing.T) {
 	var output bytes.Buffer
 
-	redrawActionBar(&output, 2, true)
+	redrawActionBar(&output, model.Entry{}, 1, true)
 
 	got := output.String()
 	if !strings.HasPrefix(got, "\x1b[1A\r\x1b[2K") || strings.Contains(got, "\x1b[2J") {

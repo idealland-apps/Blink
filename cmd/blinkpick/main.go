@@ -386,7 +386,25 @@ type cardView struct {
 	Notice   string
 }
 
-var cardActions = []string{"Open original", "Save", "Mark read", "Next", "Quit"}
+const (
+	actionOpen = iota
+	actionMarkRead
+	actionNext
+	actionSave
+	actionQuit
+)
+
+func actionLabels(entry model.Entry) []string {
+	readAction := "Mark read"
+	if strings.EqualFold(entry.Status, "read") {
+		readAction = "Mark unread"
+	}
+	saveAction := "Save"
+	if entry.Starred {
+		saveAction = "Unsave"
+	}
+	return []string{"Open original", readAction, "Next", saveAction, "Quit"}
+}
 
 func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) int {
 	reader := bufio.NewReader(in)
@@ -416,17 +434,17 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 			}
 			switch key {
 			case "left":
-				selected = (selected + len(cardActions) - 1) % len(cardActions)
+				selected = (selected + len(actionLabels(entry)) - 1) % len(actionLabels(entry))
 				if color {
-					redrawActionBar(stdout, selected, true)
+					redrawActionBar(stdout, entry, selected, true)
 				} else {
 					needsFullRender = true
 				}
 				continue
 			case "right":
-				selected = (selected + 1) % len(cardActions)
+				selected = (selected + 1) % len(actionLabels(entry))
 				if color {
-					redrawActionBar(stdout, selected, true)
+					redrawActionBar(stdout, entry, selected, true)
 				} else {
 					needsFullRender = true
 				}
@@ -438,13 +456,13 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 			case "o":
 				selected = 0
 			case "s":
-				selected = 1
+				selected = actionSave
 			case "r":
-				selected = 2
+				selected = actionMarkRead
 			case "n":
-				selected = 3
+				selected = actionNext
 			case "q":
-				selected = 4
+				selected = actionQuit
 			case "enter":
 				// Run the highlighted action.
 			default:
@@ -453,13 +471,33 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 				continue
 			}
 			switch selected {
-			case 0:
+			case actionOpen:
 				if err := openURL(entry.URL); err != nil {
 					notice = "Could not open browser: " + err.Error()
 				} else {
 					notice = "Opened original URL."
 				}
-			case 1:
+			case actionMarkRead:
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+				var err error
+				if strings.EqualFold(entry.Status, "read") {
+					err = client.MarkUnread(ctx, entry.ID)
+				} else {
+					err = client.MarkRead(ctx, entry.ID)
+				}
+				cancel()
+				if err != nil {
+					notice = "Update read status failed: " + err.Error()
+				} else if strings.EqualFold(entry.Status, "read") {
+					entry.Status = "unread"
+					notice = "Marked unread in Miniflux."
+				} else {
+					entry.Status = "read"
+					notice = "Marked read in Miniflux."
+				}
+			case actionNext:
+				break
+			case actionSave:
 				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 				err := client.SetStarred(ctx, entry.ID, !entry.Starred)
 				cancel()
@@ -469,23 +507,11 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 					entry.Starred = !entry.Starred
 					notice = map[bool]string{true: "Saved in Miniflux.", false: "Removed from saved."}[entry.Starred]
 				}
-			case 2:
-				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-				err := client.MarkRead(ctx, entry.ID)
-				cancel()
-				if err != nil {
-					notice = "Mark read failed: " + err.Error()
-				} else {
-					entry.Status = "read"
-					notice = "Marked read in Miniflux."
-				}
-			case 3:
-				break
-			case 4:
+			case actionQuit:
 				return 0
 			}
 			needsFullRender = true
-			if selected == 3 {
+			if selected == actionNext {
 				break
 			}
 		}
@@ -567,12 +593,12 @@ func renderCard(out io.Writer, entry model.Entry, view cardView) {
 		fmt.Fprintf(out, "\n%s%s%s\n", muted, view.Notice, reset)
 	}
 	fmt.Fprint(out, "\n")
-	renderActionBar(out, view.Selected, view.Color)
+	renderActionBar(out, entry, view.Selected, view.Color)
 	fmt.Fprint(out, "\n")
 }
 
-func renderActionBar(out io.Writer, selected int, color bool) {
-	for index, action := range cardActions {
+func renderActionBar(out io.Writer, entry model.Entry, selected int, color bool) {
+	for index, action := range actionLabels(entry) {
 		if index == selected && color {
 			fmt.Fprintf(out, " \x1b[7m %s \x1b[0m", action)
 		} else if index == selected {
@@ -583,9 +609,9 @@ func renderActionBar(out io.Writer, selected int, color bool) {
 	}
 }
 
-func redrawActionBar(out io.Writer, selected int, color bool) {
+func redrawActionBar(out io.Writer, entry model.Entry, selected int, color bool) {
 	_, _ = fmt.Fprint(out, "\x1b[1A\r\x1b[2K")
-	renderActionBar(out, selected, color)
+	renderActionBar(out, entry, selected, color)
 	_, _ = fmt.Fprint(out, "\n")
 }
 
