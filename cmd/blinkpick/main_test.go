@@ -38,12 +38,12 @@ func TestConfigPathDefaultsBesideExecutable(t *testing.T) {
 
 func TestActionLabelsReflectEntryState(t *testing.T) {
 	unread := actionLabels(model.Entry{Status: "unread"})
-	if got, want := strings.Join(unread, "|"), "Open original|Mark read|Next|Save|Quit"; got != want {
+	if got, want := strings.Join(unread, "|"), "Open original|Mark read|Next|Star|Quit"; got != want {
 		t.Fatalf("unread labels = %q, want %q", got, want)
 	}
 
 	readStarred := actionLabels(model.Entry{Status: "read", Starred: true})
-	if got, want := strings.Join(readStarred, "|"), "Open original|Mark unread|Next|Unsave|Quit"; got != want {
+	if got, want := strings.Join(readStarred, "|"), "Open original|Mark unread|Next|Unstar|Quit"; got != want {
 		t.Fatalf("read/starred labels = %q, want %q", got, want)
 	}
 }
@@ -59,6 +59,19 @@ func TestRenderCardUsesSemanticANSIStylesAndSelection(t *testing.T) {
 	got := output.String()
 	if !strings.Contains(got, "\x1b[1m") || !strings.Contains(got, "\x1b[7m Mark read \x1b[0m") {
 		t.Fatalf("rendered card lacks expected ANSI semantic styles: %q", got)
+	}
+}
+
+func TestRenderCardShowsGoldStarredBadgeOnlyForStarredEntries(t *testing.T) {
+	var starred, plain bytes.Buffer
+	renderCard(&starred, model.Entry{ID: 1, Title: "Starred", Starred: true}, cardView{Color: true})
+	renderCard(&plain, model.Entry{ID: 2, Title: "Plain"}, cardView{Color: true})
+
+	if !strings.Contains(starred.String(), "\x1b[33m★ STARRED\x1b[0m") {
+		t.Fatalf("starred badge missing or not gold: %q", starred.String())
+	}
+	if strings.Contains(plain.String(), "STARRED") {
+		t.Fatalf("unstarred card shows starred badge: %q", plain.String())
 	}
 }
 

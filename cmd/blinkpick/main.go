@@ -399,11 +399,11 @@ func actionLabels(entry model.Entry) []string {
 	if strings.EqualFold(entry.Status, "read") {
 		readAction = "Mark unread"
 	}
-	saveAction := "Save"
+	starAction := "Star"
 	if entry.Starred {
-		saveAction = "Unsave"
+		starAction = "Unstar"
 	}
-	return []string{"Open original", readAction, "Next", saveAction, "Quit"}
+	return []string{"Open original", readAction, "Next", starAction, "Quit"}
 }
 
 func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) int {
@@ -587,7 +587,15 @@ func renderCard(out io.Writer, entry model.Entry, view cardView) {
 	}
 	fmt.Fprintf(out, "%s%s%s%s  ", bold, statusColor, statusText, reset)
 	fmt.Fprintf(out, "%s%s%s%s", bold, accent, category, reset)
-	fmt.Fprintf(out, "  %s· %s%s  %s· %s%d min%s  %s· %s%s\n\n", muted, entry.Feed.Title, reset, muted, bold, entry.ReadingTime, reset, muted, entry.PublishedAt.Local().Format("2006-01-02 15:04"), reset)
+	fmt.Fprintf(out, "  %s· %s%s  %s· %s%d min%s  %s· %s%s", muted, entry.Feed.Title, reset, muted, bold, entry.ReadingTime, reset, muted, entry.PublishedAt.Local().Format("2006-01-02 15:04"), reset)
+	if entry.Starred {
+		starColor := ""
+		if view.Color {
+			starColor = "\x1b[33m"
+		}
+		fmt.Fprintf(out, "  %s★ STARRED%s", starColor, reset)
+	}
+	fmt.Fprint(out, "\n\n")
 	fmt.Fprintf(out, "%s%s%s\n\n%s\n\n%s%s%s\n", bold, entry.Title, reset, preview(entry.Content, 700), muted, entry.URL, reset)
 	if view.Notice != "" {
 		fmt.Fprintf(out, "\n%s%s%s\n", muted, view.Notice, reset)

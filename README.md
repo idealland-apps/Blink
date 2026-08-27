@@ -99,13 +99,13 @@ blinkpick --category AI --fresh 7d
 blinkpick --all
 ```
 
-The card shows a status badge, category, feed, estimated reading time, publication time, title, a short plaintext preview, and the original URL. **Unread** is labelled `● UNREAD` (terminal yellow/orange palette); **read** is labelled `✓ READ` (terminal green palette). The label remains explicit when colors are disabled. After a successful `Mark read` request, the same card is immediately re-rendered with the read badge; failures retain the prior state and show an error.
+The card shows a status badge, category, feed, estimated reading time, publication time, title, a short plaintext preview, and the original URL. **Unread** is labelled `● UNREAD` (terminal yellow/orange palette); **read** is labelled `✓ READ` (terminal green palette). Starred entries additionally show a terminal-gold `★ STARRED` badge at the end of the status row. The labels remain explicit when colors are disabled. After a successful `Mark read` request, the same card is immediately re-rendered with the read badge; failures retain the prior state and show an error.
 
 The interactive card runs in the terminal's alternate screen buffer, so normal terminal scrollback does not accumulate stale card redraws. Exiting restores the prior shell screen. It intentionally sends full reading to the original site rather than implementing an HTML browser.
 
 The card uses ANSI semantic styles rather than fixed RGB colors: category/title use bold and the terminal's cyan palette, metadata is dimmed, and the selected action uses reverse video. This respects the user-selected terminal theme. Set `NO_COLOR=1` to opt out of colors and retain a plain-text selected button.
 
-At the action bar, use **Left/Right Arrow** to select an action and **Enter** to run it. Actions stay in English and are ordered by the reading flow: `Open original`, `Mark read` / `Mark unread`, `Next`, `Save` / `Unsave`, and `Quit`. `Open original` only opens the browser; it intentionally does not alter the Miniflux read state. Keyboard shortcuts remain available:
+At the action bar, use **Left/Right Arrow** to select an action and **Enter** to run it. Actions stay in English and are ordered by the reading flow: `Open original`, `Mark read` / `Mark unread`, `Next`, `Star` / `Unstar`, and `Quit`. `Open original` only opens the browser; it intentionally does not alter the Miniflux read state. Keyboard shortcuts remain available:
 
 | Key | Action |
 |---|---|
