@@ -50,6 +50,28 @@ func TestRenderCardUsesSemanticANSIStylesAndSelection(t *testing.T) {
 	}
 }
 
+func TestRenderCardShowsColoredReadableStatusBadge(t *testing.T) {
+	entry := model.Entry{ID: 1, Title: "Status article", Status: "read"}
+	var output bytes.Buffer
+
+	renderCard(&output, entry, cardView{Color: true})
+
+	got := output.String()
+	if !strings.Contains(got, "\x1b[32m✓ READ\x1b[0m") {
+		t.Fatalf("read status badge missing or not green: %q", got)
+	}
+}
+
+func TestAlternateScreenRestoresMainScrollbackOnExit(t *testing.T) {
+	var output bytes.Buffer
+	leave := enterAlternateScreen(&output)
+	leave()
+
+	if got, want := output.String(), "\x1b[?1049h\x1b[H\x1b[?1049l"; got != want {
+		t.Fatalf("alternate screen sequence = %q, want %q", got, want)
+	}
+}
+
 func TestRedrawActionBarOnlyRepaintsTheActionLine(t *testing.T) {
 	var output bytes.Buffer
 

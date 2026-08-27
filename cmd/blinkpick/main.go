@@ -493,19 +493,28 @@ func interactive(in io.Reader, stdout, stderr io.Writer, flags selectionFlags) i
 }
 
 func enableInteractiveTerminal(in io.Reader, out io.Writer) (bool, func()) {
-	if os.Getenv("NO_COLOR") != "" {
-		return false, nil
-	}
 	input, inputOK := in.(*os.File)
 	output, outputOK := out.(*os.File)
 	if !inputOK || !outputOK || !term.IsTerminal(int(input.Fd())) || !term.IsTerminal(int(output.Fd())) {
 		return false, nil
 	}
+	leaveScreen := enterAlternateScreen(out)
 	oldState, err := term.MakeRaw(int(input.Fd()))
+	color := os.Getenv("NO_COLOR") == ""
 	if err != nil {
-		return true, nil
+		return color, func() { leaveScreen(); _, _ = fmt.Fprint(out, "\x1b[0m\n") }
 	}
-	return true, func() { _ = term.Restore(int(input.Fd()), oldState); _, _ = fmt.Fprint(out, "\x1b[0m\n") }
+	return color, func() {
+		_ = term.Restore(int(input.Fd()), oldState)
+		_, _ = fmt.Fprint(out, "\x1b[0m")
+		leaveScreen()
+		_, _ = fmt.Fprint(out, "\n")
+	}
+}
+
+func enterAlternateScreen(out io.Writer) func() {
+	_, _ = fmt.Fprint(out, "\x1b[?1049h\x1b[H")
+	return func() { _, _ = fmt.Fprint(out, "\x1b[?1049l") }
 }
 
 func readKey(reader *bufio.Reader) (string, bool) {
@@ -541,6 +550,16 @@ func renderCard(out io.Writer, entry model.Entry, view cardView) {
 	if view.Color {
 		bold, accent, muted, reset = "\x1b[1m", "\x1b[36m", "\x1b[2m", "\x1b[0m"
 	}
+	statusText, statusColor := "● UNREAD", ""
+	if strings.EqualFold(entry.Status, "read") {
+		statusText, statusColor = "✓ READ", "\x1b[32m"
+	} else if view.Color {
+		statusColor = "\x1b[33m"
+	}
+	if !view.Color {
+		statusColor = ""
+	}
+	fmt.Fprintf(out, "%s%s%s%s  ", bold, statusColor, statusText, reset)
 	fmt.Fprintf(out, "%s%s%s%s", bold, accent, category, reset)
 	fmt.Fprintf(out, "  %s· %s%s  %s· %s%d min%s  %s· %s%s\n\n", muted, entry.Feed.Title, reset, muted, bold, entry.ReadingTime, reset, muted, entry.PublishedAt.Local().Format("2006-01-02 15:04"), reset)
 	fmt.Fprintf(out, "%s%s%s\n\n%s\n\n%s%s%s\n", bold, entry.Title, reset, preview(entry.Content, 700), muted, entry.URL, reset)
