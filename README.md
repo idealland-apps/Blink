@@ -117,7 +117,7 @@ At the action bar, use **Left/Right Arrow** to select an action and **Enter** to
 | `n` | Select and pick another article |
 | `q` | Quit |
 
-Save, mark-read, and open actions keep the current article visible and show a result notice. Only **Next** fetches a new card.
+Star, mark-read/unread, and open actions keep the current article visible and show a result notice. Only **Next** fetches a new card. State mutations use Miniflux's batch `PUT /v1/entries` endpoint with the selected `entry_ids`, so read and starred state changes persist remotely.
 
 ## Agent hooks and scripts
 

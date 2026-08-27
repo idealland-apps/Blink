@@ -50,11 +50,11 @@ func TestListEntriesAcceptsAPIVersionInConfiguredURL(t *testing.T) {
 
 func TestMarkUnreadSendsUnreadStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut || r.URL.Path != "/v1/entries/9" {
+		if r.Method != http.MethodPut || r.URL.Path != "/v1/entries" {
 			t.Fatalf("request = %s %s", r.Method, r.URL.Path)
 		}
 		body, _ := io.ReadAll(r.Body)
-		if !strings.Contains(string(body), `"status":"unread"`) {
+		if !strings.Contains(string(body), `"entry_ids":[9]`) || !strings.Contains(string(body), `"status":"unread"`) {
 			t.Fatalf("body = %s", body)
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -73,11 +73,11 @@ func TestUpdateEntryUsesBasicAuthAndDoesNotLeakSecret(t *testing.T) {
 		if !ok || user != "anthony" || password != "password" {
 			t.Fatalf("basic auth = %q/%q", user, password)
 		}
-		if r.Method != http.MethodPut || r.URL.Path != "/v1/entries/9" {
+		if r.Method != http.MethodPut || r.URL.Path != "/v1/entries" {
 			t.Fatalf("request = %s %s", r.Method, r.URL.Path)
 		}
 		body, _ := io.ReadAll(r.Body)
-		if !strings.Contains(string(body), `"starred":true`) {
+		if !strings.Contains(string(body), `"entry_ids":[9]`) || !strings.Contains(string(body), `"starred":true`) {
 			t.Fatalf("body = %s", body)
 		}
 		w.WriteHeader(http.StatusNoContent)

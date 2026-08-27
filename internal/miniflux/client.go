@@ -77,7 +77,8 @@ func (c *Client) SetStarred(ctx context.Context, id int64, starred bool) error {
 }
 
 func (c *Client) update(ctx context.Context, id int64, payload map[string]any) error {
-	return c.doJSON(ctx, http.MethodPut, path.Join("/v1/entries", strconv.FormatInt(id, 10)), nil, payload, nil)
+	payload["entry_ids"] = []int64{id}
+	return c.doJSON(ctx, http.MethodPut, "/v1/entries", nil, payload, nil)
 }
 
 func (c *Client) doJSON(ctx context.Context, method, endpoint string, query url.Values, requestBody, responseBody any) error {
